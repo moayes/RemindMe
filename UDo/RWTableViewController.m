@@ -8,11 +8,12 @@
 
 #import "RWTableViewController.h"
 #import "UIAlertView+RWBlock.h"
+#import "UIButton+RWBlock.h"
 
 @interface RWTableViewController ()
 
 /** @brief An array of NSString objects, data source of the table view. */
-@property (strong, nonatomic) NSMutableArray *objects;
+@property (strong, nonatomic) NSMutableArray *todoItems;
 
 @end
 
@@ -20,11 +21,11 @@
 
 #pragma mark - Custom accessors
 
-- (NSMutableArray *)objects {
-  if (!_objects) {
-    _objects = [@[@"Get Milk!", @"Go to gym", @"Breakfast with Rita!", @"Call Bob", @"Pick up newspaper", @"Send an email to Joe", @"Read this tutorial!", @"Pick up flowers"] mutableCopy];
+- (NSMutableArray *)todoItems {
+  if (!_todoItems) {
+    _todoItems = [@[@"Get Milk!", @"Go to gym", @"Breakfast with Rita!", @"Call Bob", @"Pick up newspaper", @"Send an email to Joe", @"Read this tutorial!", @"Pick up flowers"] mutableCopy];
   }
-  return _objects;
+  return _todoItems;
 }
 
 #pragma mark - View life cycle
@@ -41,7 +42,7 @@
 #pragma mark - UITableView data source and delegate methods
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-  return [self.objects count];
+  return [self.todoItems count];
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -50,9 +51,24 @@
   UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:kIdentifier forIndexPath:indexPath];
   
   // Update cell content from data source.
-  NSString *object = self.objects[indexPath.row];
+  NSString *object = self.todoItems[indexPath.row];
   cell.backgroundColor = [UIColor whiteColor];
   cell.textLabel.text = object;
+  
+  // Add a button as accessory view that says 'Add Reminder'.
+  UIButton *addReminderButton = [UIButton buttonWithType:UIButtonTypeRoundedRect];
+  addReminderButton.frame = CGRectMake(0.0, 0.0, 100.0, 30.0);
+  [addReminderButton setTitle:@"Add Reminder" forState:UIControlStateNormal];
+  
+  __weak RWTableViewController *weakself = self;
+  [addReminderButton addActionblock:^(UIButton *sender) {
+    
+    // Add a reminder for to do item.
+    [weakself addReminderForToDoItem:object];
+    
+  } forControlEvents:UIControlEventTouchUpInside];
+  
+  cell.accessoryView = addReminderButton;
   
   return cell;
 }
@@ -66,7 +82,15 @@
 }
 
 - (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath {
-  [self.objects removeObjectAtIndex:indexPath.row];
+  
+  NSString *todoItem = self.todoItems[indexPath.row];
+  
+  // Remove to-do item.
+  [self.todoItems removeObject:todoItem];
+  
+  // Remove the associated reminder item (if it has one).
+  [self deleteReminderForToDoItem:todoItem];
+  
   [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
 }
 
@@ -89,9 +113,9 @@
       
       UITextField *textField = [alertView textFieldAtIndex:0];
       NSString *string = [textField.text capitalizedString];
-      [weakself.objects addObject:string];
+      [weakself.todoItems addObject:string];
       
-      NSUInteger row = [weakself.objects count] - 1;
+      NSUInteger row = [weakself.todoItems count] - 1;
       NSIndexPath *indexPath = [NSIndexPath indexPathForRow:row inSection:0];
       [weakself.tableView insertRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
     }
@@ -150,7 +174,7 @@
       if (indexPath && ![indexPath isEqual:sourceIndexPath]) {
         
         // ... update data source.
-        [self.objects exchangeObjectAtIndex:indexPath.row withObjectAtIndex:sourceIndexPath.row];
+        [self.todoItems exchangeObjectAtIndex:indexPath.row withObjectAtIndex:sourceIndexPath.row];
         
         // ... move the rows.
         [self.tableView moveRowAtIndexPath:sourceIndexPath toIndexPath:indexPath];
@@ -198,6 +222,16 @@
   snapshot.layer.shadowOpacity = 0.4;
   
   return snapshot;
+}
+
+/** @brief Add a to-do item to user's default Reminder database. */
+- (void)addReminderForToDoItem:(NSString *)item {
+  // TODO: implement this!
+}
+
+/** @brief Delete a to-do item from user's default Reminder database, if applicable. */
+- (void)deleteReminderForToDoItem:(NSString *)item {
+  // TODO: implement this!
 }
 
 @end

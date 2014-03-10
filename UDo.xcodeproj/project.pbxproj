@@ -22,6 +22,7 @@
 		6D3189F3187C42A800994DDF /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6D3189F2187C42A800994DDF /* Images.xcassets */; };
 		6D3189F5187C42BD00994DDF /* Storyboard.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 6D3189F4187C42BD00994DDF /* Storyboard.storyboard */; };
 		6D3189F8187C438B00994DDF /* UIAlertView+RWBlock.m in Sources */ = {isa = PBXBuildFile; fileRef = 6D3189F7187C438B00994DDF /* UIAlertView+RWBlock.m */; };
+		6DDDCA2518CD647E00DD0709 /* UIButton+RWBlock.m in Sources */ = {isa = PBXBuildFile; fileRef = 6DDDCA2418CD647E00DD0709 /* UIButton+RWBlock.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -56,6 +57,8 @@
 		6D3189F4187C42BD00994DDF /* Storyboard.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; path = Storyboard.storyboard; sourceTree = "<group>"; };
 		6D3189F6187C438B00994DDF /* UIAlertView+RWBlock.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIAlertView+RWBlock.h"; sourceTree = "<group>"; };
 		6D3189F7187C438B00994DDF /* UIAlertView+RWBlock.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "UIAlertView+RWBlock.m"; sourceTree = "<group>"; };
+		6DDDCA2318CD647E00DD0709 /* UIButton+RWBlock.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIButton+RWBlock.h"; sourceTree = "<group>"; };
+		6DDDCA2418CD647E00DD0709 /* UIButton+RWBlock.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "UIButton+RWBlock.m"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -120,6 +123,8 @@
 				6D3189CF187C422A00994DDF /* RWAppDelegate.m */,
 				6D3189EF187C427400994DDF /* RWTableViewController.h */,
 				6D3189F0187C427400994DDF /* RWTableViewController.m */,
+				6DDDCA2318CD647E00DD0709 /* UIButton+RWBlock.h */,
+				6DDDCA2418CD647E00DD0709 /* UIButton+RWBlock.m */,
 				6D3189F6187C438B00994DDF /* UIAlertView+RWBlock.h */,
 				6D3189F7187C438B00994DDF /* UIAlertView+RWBlock.m */,
 				6D3189F2187C42A800994DDF /* Images.xcassets */,
@@ -258,6 +263,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				6D3189F8187C438B00994DDF /* UIAlertView+RWBlock.m in Sources */,
+				6DDDCA2518CD647E00DD0709 /* UIButton+RWBlock.m in Sources */,
 				6D3189CC187C422A00994DDF /* main.m in Sources */,
 				6D3189F1187C427400994DDF /* RWTableViewController.m in Sources */,
 				6D3189D0187C422A00994DDF /* RWAppDelegate.m in Sources */,
