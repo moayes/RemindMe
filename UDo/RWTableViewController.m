@@ -234,4 +234,9 @@
   // TODO: implement this!
 }
 
+/** @brief Fetch reminder items from user's Reminder database. */
+- (void)fetchReminders {
+  // TODO: implement this!
+}
+
 @end
