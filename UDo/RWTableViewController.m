@@ -60,11 +60,11 @@
   addReminderButton.frame = CGRectMake(0.0, 0.0, 100.0, 30.0);
   [addReminderButton setTitle:@"Add Reminder" forState:UIControlStateNormal];
   
-  __weak RWTableViewController *weakself = self;
+  __weak RWTableViewController *weakSelf = self;
   [addReminderButton addActionblock:^(UIButton *sender) {
     
     // Add a reminder for to do item.
-    [weakself addReminderForToDoItem:object];
+    [weakSelf addReminderForToDoItem:object];
     
   } forControlEvents:UIControlEventTouchUpInside];
   
@@ -103,7 +103,7 @@
   
   inputAlertView.alertViewStyle = UIAlertViewStylePlainTextInput;
   
-  __weak RWTableViewController *weakself = self;
+  __weak RWTableViewController *weakSelf = self;
   
   // Add a completion block (using our category to UIAlertView).
   [inputAlertView setCompletionBlock:^(UIAlertView *alertView, NSInteger buttonIndex) {
@@ -113,11 +113,11 @@
       
       UITextField *textField = [alertView textFieldAtIndex:0];
       NSString *string = [textField.text capitalizedString];
-      [weakself.todoItems addObject:string];
+      [weakSelf.todoItems addObject:string];
       
-      NSUInteger row = [weakself.todoItems count] - 1;
+      NSUInteger row = [weakSelf.todoItems count] - 1;
       NSIndexPath *indexPath = [NSIndexPath indexPathForRow:row inSection:0];
-      [weakself.tableView insertRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
+      [weakSelf.tableView insertRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
     }
   }];
   
@@ -224,12 +224,12 @@
   return snapshot;
 }
 
-/** @brief Add a to-do item to user's default Reminder database. */
+/** @brief Add a to-do item to user's Reminder database. */
 - (void)addReminderForToDoItem:(NSString *)item {
   // TODO: implement this!
 }
 
-/** @brief Delete a to-do item from user's default Reminder database, if applicable. */
+/** @brief Delete a to-do item from user's Reminder database, if applicable. */
 - (void)deleteReminderForToDoItem:(NSString *)item {
   // TODO: implement this!
 }
