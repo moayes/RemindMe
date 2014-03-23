@@ -9,17 +9,31 @@
 #import "RWTableViewController.h"
 #import "UIAlertView+RWBlock.h"
 #import "UIButton+RWBlock.h"
+@import EventKit;
 
 @interface RWTableViewController ()
 
 /** @brief An array of NSString objects, data source of the table view. */
 @property (strong, nonatomic) NSMutableArray *todoItems;
 
+/** @brief A representative of Calendar database. */
+@property (strong, nonatomic) EKEventStore *eventStore;
+
+/** @brief A boolean indicating whether app has access to event store. */
+@property (nonatomic) BOOL isAccessToEventStoreGranted;
+
 @end
 
 @implementation RWTableViewController
 
 #pragma mark - Custom accessors
+
+- (EKEventStore *)eventStore {
+  if (!_eventStore) {
+    _eventStore = [EKEventStore new];
+  }
+  return _eventStore;
+}
 
 - (NSMutableArray *)todoItems {
   if (!_todoItems) {
@@ -35,6 +49,9 @@
   
   UILongPressGestureRecognizer *longPress = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(longPressGestureRecognized:)];
   [self.tableView addGestureRecognizer:longPress];
+  
+  // Call a helper method to update authorization status.
+  [self updateAuthorizationStatusToAccessEventStore];
   
   [super viewDidLoad];
 }
@@ -222,6 +239,47 @@
   snapshot.layer.shadowOpacity = 0.4;
   
   return snapshot;
+}
+
+/** @brief Update authorization status to access Reminder database. */
+- (void)updateAuthorizationStatusToAccessEventStore {
+  
+  EKAuthorizationStatus authorizationStatus = [EKEventStore authorizationStatusForEntityType:EKEntityTypeReminder];
+  
+  switch (authorizationStatus) {
+      
+      // Fall through. If denied or restricted, display and alert that we can't add a reminder.
+    case EKAuthorizationStatusDenied:
+    case EKAuthorizationStatusRestricted: {
+      
+      self.isAccessToEventStoreGranted = NO;
+      
+      UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:@"Access Denied" message:@"This app doesn't have access to your Reminders." delegate:nil cancelButtonTitle:@"Dismiss" otherButtonTitles:nil];
+      [alertView show];
+      
+      [self.tableView reloadData];
+      
+      break;
+    }
+      
+    case EKAuthorizationStatusAuthorized:
+      self.isAccessToEventStoreGranted = YES;
+      [self.tableView reloadData];
+      break;
+      
+    case EKAuthorizationStatusNotDetermined: {
+      __weak RWTableViewController *weakSelf = self;
+      [self.eventStore requestAccessToEntityType:EKEntityTypeReminder completion:^(BOOL granted, NSError *error) {
+        
+        dispatch_async(dispatch_get_main_queue(), ^{
+          weakSelf.isAccessToEventStoreGranted = granted;
+          [weakSelf.tableView reloadData];
+        });
+        
+      }];
+      break;
+    }
+  }
 }
 
 /** @brief Add a to-do item to user's Reminder database. */
