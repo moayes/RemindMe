@@ -72,20 +72,27 @@
   cell.backgroundColor = [UIColor whiteColor];
   cell.textLabel.text = object;
   
-  // Add a button as accessory view that says 'Add Reminder'.
-  UIButton *addReminderButton = [UIButton buttonWithType:UIButtonTypeRoundedRect];
-  addReminderButton.frame = CGRectMake(0.0, 0.0, 100.0, 30.0);
-  [addReminderButton setTitle:@"Add Reminder" forState:UIControlStateNormal];
-  
-  __weak RWTableViewController *weakSelf = self;
-  [addReminderButton addActionblock:^(UIButton *sender) {
+  // Add 'Add Reminder' button only if app has access to Calendar database.
+  if (self.isAccessToEventStoreGranted) {
     
-    // Add a reminder for to do item.
-    [weakSelf addReminderForToDoItem:object];
+    // Add a button as accessory view that says 'Add Reminder'.
+    UIButton *addReminderButton = [UIButton buttonWithType:UIButtonTypeRoundedRect];
+    addReminderButton.frame = CGRectMake(0.0, 0.0, 100.0, 30.0);
+    [addReminderButton setTitle:@"Add Reminder" forState:UIControlStateNormal];
     
-  } forControlEvents:UIControlEventTouchUpInside];
-  
-  cell.accessoryView = addReminderButton;
+    __weak RWTableViewController *weakself = self;
+    [addReminderButton addActionblock:^(UIButton *sender) {
+      
+      // Add a reminder for to do item.
+      [weakself addReminderForToDoItem:object];
+      
+    } forControlEvents:UIControlEventTouchUpInside];
+    
+    cell.accessoryView = addReminderButton;
+  }
+  else {
+    cell.accessoryView = nil;
+  }
   
   return cell;
 }
