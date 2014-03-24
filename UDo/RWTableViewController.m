@@ -22,11 +22,32 @@
 /** @brief A boolean indicating whether app has access to event store. */
 @property (nonatomic) BOOL isAccessToEventStoreGranted;
 
+/** @brief A reminder list specific to this app. */
+@property (strong, nonatomic) EKCalendar *calendar;
+
 @end
 
 @implementation RWTableViewController
 
 #pragma mark - Custom accessors
+
+// Lazily instantiate (create) a reminder list for this app.
+- (EKCalendar *)calendar {
+  if (!_calendar) {
+    
+    // Create a reminder list for this app.
+    _calendar = [EKCalendar calendarForEntityType:EKEntityTypeReminder eventStore:self.eventStore];
+    _calendar.title = @"UDo!";
+    _calendar.source = self.eventStore.defaultCalendarForNewReminders.source;
+    
+    NSError *calendarErr = nil;
+    BOOL calendarSuccess = [self.eventStore saveCalendar:_calendar commit:YES error:&calendarErr];
+    if (!calendarSuccess) {
+      // Handle error
+    }
+  }
+  return _calendar;
+}
 
 - (EKEventStore *)eventStore {
   if (!_eventStore) {
@@ -291,7 +312,27 @@
 
 /** @brief Add a to-do item to user's Reminder database. */
 - (void)addReminderForToDoItem:(NSString *)item {
-  // TODO: implement this!
+  
+  // App doesn't have access.
+  if (!self.isAccessToEventStoreGranted)
+    return;
+  
+  // Create a new reminder. At the minimum set its title and calendar property.
+  EKReminder *reminder = [EKReminder reminderWithEventStore:self.eventStore];
+  reminder.title = item;
+  reminder.calendar = self.calendar;
+  
+  // Save and commit.
+  NSError *error = nil;
+  BOOL success = [self.eventStore saveReminder:reminder commit:YES error:&error];
+  if (!success) {
+    // Handle error.
+  }
+  
+  // Give user some feedback!
+  NSString *message = (success) ? @"Reminder was successfully added!" : @"Failed to add reminder!";
+  UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:nil message:message delegate:nil cancelButtonTitle:nil otherButtonTitles:@"Dismiss", nil];
+  [alertView show];
 }
 
 /** @brief Delete a to-do item from user's Reminder database, if applicable. */
