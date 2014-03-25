@@ -35,15 +35,31 @@
 - (EKCalendar *)calendar {
   if (!_calendar) {
     
-    // Create a reminder list for this app.
-    _calendar = [EKCalendar calendarForEntityType:EKEntityTypeReminder eventStore:self.eventStore];
-    _calendar.title = @"UDo!";
-    _calendar.source = self.eventStore.defaultCalendarForNewReminders.source;
+    // Get all the calendars with Reminder type.
+    NSArray *calendars = [self.eventStore calendarsForEntityType:EKEntityTypeReminder];
     
-    NSError *calendarErr = nil;
-    BOOL calendarSuccess = [self.eventStore saveCalendar:_calendar commit:YES error:&calendarErr];
-    if (!calendarSuccess) {
-      // Handle error
+    // Dose have our app's calendar (from previous run).
+    NSString *calendarTitle = @"UDo!";
+    NSPredicate *predicate = [NSPredicate predicateWithFormat:@"title matches %@", calendarTitle];
+    NSArray *filtered = [calendars filteredArrayUsingPredicate:predicate];
+    
+    if ([filtered count]) {
+      
+      // If more than, assume the 1st one is ours.
+      _calendar = [filtered firstObject];
+    }
+    else {
+      
+      // Create a reminder list for this app.
+      _calendar = [EKCalendar calendarForEntityType:EKEntityTypeReminder eventStore:self.eventStore];
+      _calendar.title = @"UDo!";
+      _calendar.source = self.eventStore.defaultCalendarForNewReminders.source;
+      
+      NSError *calendarErr = nil;
+      BOOL calendarSuccess = [self.eventStore saveCalendar:_calendar commit:YES error:&calendarErr];
+      if (!calendarSuccess) {
+        // Handle error
+      }
     }
   }
   return _calendar;
