@@ -25,6 +25,9 @@
 /** @brief A reminder list specific to this app. */
 @property (strong, nonatomic) EKCalendar *calendar;
 
+/** @brief An array of EKReminder objects fetched from Calendar database. */
+@property (copy, nonatomic) NSArray *reminders;
+
 @end
 
 @implementation RWTableViewController
@@ -35,15 +38,31 @@
 - (EKCalendar *)calendar {
   if (!_calendar) {
     
-    // Create a reminder list for this app.
-    _calendar = [EKCalendar calendarForEntityType:EKEntityTypeReminder eventStore:self.eventStore];
-    _calendar.title = @"UDo!";
-    _calendar.source = self.eventStore.defaultCalendarForNewReminders.source;
+    // Get all the calendars with Reminder type.
+    NSArray *calendars = [self.eventStore calendarsForEntityType:EKEntityTypeReminder];
     
-    NSError *calendarErr = nil;
-    BOOL calendarSuccess = [self.eventStore saveCalendar:_calendar commit:YES error:&calendarErr];
-    if (!calendarSuccess) {
-      // Handle error
+    // Dose have our app's calendar (from previous run).
+    NSString *calendarTitle = @"UDo!";
+    NSPredicate *predicate = [NSPredicate predicateWithFormat:@"title matches %@", calendarTitle];
+    NSArray *filtered = [calendars filteredArrayUsingPredicate:predicate];
+    
+    if ([filtered count]) {
+      
+      // If more than, assume the 1st one is ours.
+      _calendar = [filtered firstObject];
+    }
+    else {
+      
+      // Create a reminder list for this app.
+      _calendar = [EKCalendar calendarForEntityType:EKEntityTypeReminder eventStore:self.eventStore];
+      _calendar.title = @"UDo!";
+      _calendar.source = self.eventStore.defaultCalendarForNewReminders.source;
+      
+      NSError *calendarErr = nil;
+      BOOL calendarSuccess = [self.eventStore saveCalendar:_calendar commit:YES error:&calendarErr];
+      if (!calendarSuccess) {
+        // Handle error
+      }
     }
   }
   return _calendar;
@@ -73,6 +92,9 @@
   
   // Call a helper method to update authorization status.
   [self updateAuthorizationStatusToAccessEventStore];
+  
+  // Fetch user's reminders from database.
+  [self fetchReminders];
   
   [super viewDidLoad];
 }
@@ -342,7 +364,24 @@
 
 /** @brief Fetch reminder items from user's Reminder database. */
 - (void)fetchReminders {
-  // TODO: implement this!
+  
+  if (self.isAccessToEventStoreGranted) {
+    
+    // A predicate to fetch all reminders.
+    NSPredicate *predicate = [self.eventStore predicateForRemindersInCalendars:@[self.calendar]];
+    
+    // Fetch all matching reminders asynchronously.
+    __weak RWTableViewController *weakSelf = self;
+    [self.eventStore fetchRemindersMatchingPredicate:predicate completion:^(NSArray *reminders) {
+      
+      weakSelf.reminders = reminders;
+      
+      dispatch_async(dispatch_get_main_queue(), ^{
+        // Update UI on the main thread.
+        [weakSelf.tableView reloadData];
+      });
+    }];
+  }
 }
 
 @end
