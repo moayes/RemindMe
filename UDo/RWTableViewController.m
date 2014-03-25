@@ -122,8 +122,11 @@
   cell.backgroundColor = [UIColor whiteColor];
   cell.textLabel.text = object;
   
-  // Add 'Add Reminder' button only if app has access to Calendar database.
-  if (self.isAccessToEventStoreGranted) {
+  // Add 'Add Reminder' button if app has access to Calendar database
+  // and the to-do item is not already added to database.
+  NSPredicate *predicate = [NSPredicate predicateWithFormat:@"title matches %@", object];
+  NSArray *filtered = [self.reminders filteredArrayUsingPredicate:predicate];
+  if (self.isAccessToEventStoreGranted && ![filtered count]) {
     
     // Add a button as accessory view that says 'Add Reminder'.
     UIButton *addReminderButton = [UIButton buttonWithType:UIButtonTypeRoundedRect];
