@@ -84,6 +84,10 @@
 
 #pragma mark - View life cycle
 
+- (void)dealloc {
+  [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
 - (void)viewDidLoad {
   self.title = @"To Do!";
   
@@ -95,6 +99,9 @@
   
   // Fetch user's reminders from database.
   [self fetchReminders];
+  
+  // Register to receive notification about changes in event store.
+  [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(eventStoreDidChangeWithNotification:) name:EKEventStoreChangedNotification object:nil];
   
   [super viewDidLoad];
 }
@@ -374,7 +381,7 @@
     __weak RWTableViewController *weakSelf = self;
     [self.eventStore fetchRemindersMatchingPredicate:predicate completion:^(NSArray *reminders) {
       
-      weakSelf.reminders = reminders;
+      weakSelf.reminders = [NSMutableArray arrayWithArray:reminders];
       
       dispatch_async(dispatch_get_main_queue(), ^{
         // Update UI on the main thread.
@@ -382,6 +389,11 @@
       });
     }];
   }
+}
+
+/** @brief Gets called when EKEventStoreChangedNotification is sent. */
+- (void)eventStoreDidChangeWithNotification:(NSNotification *)notification {
+  [self fetchReminders];
 }
 
 @end
