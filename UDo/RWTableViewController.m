@@ -369,7 +369,26 @@
 
 /** @brief Delete a to-do item from user's Reminder database, if applicable. */
 - (void)deleteReminderForToDoItem:(NSString *)item {
-  // TODO: implement this!
+  // Find the matching EKReminder(s).
+  NSPredicate *predicate = [NSPredicate predicateWithFormat:@"title matches %@", item];
+  NSArray *results = [self.reminders filteredArrayUsingPredicate:predicate];
+  
+  // Assuming we want to delete all matching reminders.
+  if ([results count]) {
+    [results enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
+      NSError *error = nil;
+      BOOL success = [self.eventStore removeReminder:obj commit:NO error:&error];
+      if (!success) {
+        // Handle delete error
+      }
+    }];
+    
+    NSError *commitErr = nil;
+    BOOL success = [self.eventStore commit:&commitErr];
+    if (!success) {
+      // Handle commit error.
+    }
+  }
 }
 
 /** @brief Fetch reminder items from user's Reminder database. */
