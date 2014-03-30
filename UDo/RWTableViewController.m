@@ -150,6 +150,20 @@
   return cell;
 }
 
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+  
+  UITableViewCell *cell = [tableView cellForRowAtIndexPath:indexPath];
+  
+  NSString *toDoItem = self.todoItems[indexPath.row];
+  NSPredicate *predicate = [NSPredicate predicateWithFormat:@"title matches %@", toDoItem];
+  
+  // Assume there are no duplicates...
+  NSArray *results = [self.reminders filteredArrayUsingPredicate:predicate];
+  EKReminder *reminder = [results firstObject];
+  reminder.completed = !reminder.isCompleted;
+  cell.imageView.image = (reminder.isCompleted) ? [UIImage imageNamed:@"checkmarkOn"] : [UIImage imageNamed:@"checkmarkOff"];
+}
+
 - (BOOL)tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath {
   return YES;
 }
