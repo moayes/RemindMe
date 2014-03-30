@@ -145,6 +145,9 @@
   }
   else {
     cell.accessoryView = nil;
+    
+    EKReminder *reminder = [filtered firstObject];
+    cell.imageView.image = (reminder.isCompleted) ? [UIImage imageNamed:@"checkmarkOn"] : [UIImage imageNamed:@"checkmarkOff"];
   }
   
   return cell;
