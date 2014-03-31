@@ -9,17 +9,71 @@
 #import "RWTableViewController.h"
 #import "UIAlertView+RWBlock.h"
 #import "UIButton+RWBlock.h"
+@import EventKit;
 
 @interface RWTableViewController ()
 
 /** @brief An array of NSString objects, data source of the table view. */
 @property (strong, nonatomic) NSMutableArray *todoItems;
 
+/** @brief A representative of Calendar database. */
+@property (strong, nonatomic) EKEventStore *eventStore;
+
+/** @brief A boolean indicating whether app has access to event store. */
+@property (nonatomic) BOOL isAccessToEventStoreGranted;
+
+/** @brief A reminder list specific to this app. */
+@property (strong, nonatomic) EKCalendar *calendar;
+
+/** @brief An array of EKReminder objects fetched from Calendar database. */
+@property (copy, nonatomic) NSArray *reminders;
+
 @end
 
 @implementation RWTableViewController
 
 #pragma mark - Custom accessors
+
+// Lazily instantiate (create) a reminder list for this app.
+- (EKCalendar *)calendar {
+  if (!_calendar) {
+    
+    // Get all the calendars with Reminder type.
+    NSArray *calendars = [self.eventStore calendarsForEntityType:EKEntityTypeReminder];
+    
+    // Dose have our app's calendar (from previous run).
+    NSString *calendarTitle = @"UDo!";
+    NSPredicate *predicate = [NSPredicate predicateWithFormat:@"title matches %@", calendarTitle];
+    NSArray *filtered = [calendars filteredArrayUsingPredicate:predicate];
+    
+    if ([filtered count]) {
+      
+      // If more than, assume the 1st one is ours.
+      _calendar = [filtered firstObject];
+    }
+    else {
+      
+      // Create a reminder list for this app.
+      _calendar = [EKCalendar calendarForEntityType:EKEntityTypeReminder eventStore:self.eventStore];
+      _calendar.title = @"UDo!";
+      _calendar.source = self.eventStore.defaultCalendarForNewReminders.source;
+      
+      NSError *calendarErr = nil;
+      BOOL calendarSuccess = [self.eventStore saveCalendar:_calendar commit:YES error:&calendarErr];
+      if (!calendarSuccess) {
+        // Handle error
+      }
+    }
+  }
+  return _calendar;
+}
+
+- (EKEventStore *)eventStore {
+  if (!_eventStore) {
+    _eventStore = [EKEventStore new];
+  }
+  return _eventStore;
+}
 
 - (NSMutableArray *)todoItems {
   if (!_todoItems) {
@@ -30,11 +84,24 @@
 
 #pragma mark - View life cycle
 
+- (void)dealloc {
+  [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
 - (void)viewDidLoad {
   self.title = @"To Do!";
   
   UILongPressGestureRecognizer *longPress = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(longPressGestureRecognized:)];
   [self.tableView addGestureRecognizer:longPress];
+  
+  // Call a helper method to update authorization status.
+  [self updateAuthorizationStatusToAccessEventStore];
+  
+  // Fetch user's reminders from database.
+  [self fetchReminders];
+  
+  // Register to receive notification about changes in event store.
+  [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(eventStoreDidChangeWithNotification:) name:EKEventStoreChangedNotification object:nil];
   
   [super viewDidLoad];
 }
@@ -55,22 +122,49 @@
   cell.backgroundColor = [UIColor whiteColor];
   cell.textLabel.text = object;
   
-  // Add a button as accessory view that says 'Add Reminder'.
-  UIButton *addReminderButton = [UIButton buttonWithType:UIButtonTypeRoundedRect];
-  addReminderButton.frame = CGRectMake(0.0, 0.0, 100.0, 30.0);
-  [addReminderButton setTitle:@"Add Reminder" forState:UIControlStateNormal];
-  
-  __weak RWTableViewController *weakself = self;
-  [addReminderButton addActionblock:^(UIButton *sender) {
+  // Add 'Add Reminder' button if app has access to Calendar database
+  // and the to-do item is not already added to database.
+  NSPredicate *predicate = [NSPredicate predicateWithFormat:@"title matches %@", object];
+  NSArray *filtered = [self.reminders filteredArrayUsingPredicate:predicate];
+  if (self.isAccessToEventStoreGranted && ![filtered count]) {
     
-    // Add a reminder for to do item.
-    [weakself addReminderForToDoItem:object];
+    // Add a button as accessory view that says 'Add Reminder'.
+    UIButton *addReminderButton = [UIButton buttonWithType:UIButtonTypeRoundedRect];
+    addReminderButton.frame = CGRectMake(0.0, 0.0, 100.0, 30.0);
+    [addReminderButton setTitle:@"Add Reminder" forState:UIControlStateNormal];
     
-  } forControlEvents:UIControlEventTouchUpInside];
-  
-  cell.accessoryView = addReminderButton;
+    __weak RWTableViewController *weakself = self;
+    [addReminderButton addActionblock:^(UIButton *sender) {
+      
+      // Add a reminder for to do item.
+      [weakself addReminderForToDoItem:object];
+      
+    } forControlEvents:UIControlEventTouchUpInside];
+    
+    cell.accessoryView = addReminderButton;
+  }
+  else {
+    cell.accessoryView = nil;
+    
+    EKReminder *reminder = [filtered firstObject];
+    cell.imageView.image = (reminder.isCompleted) ? [UIImage imageNamed:@"checkmarkOn"] : [UIImage imageNamed:@"checkmarkOff"];
+  }
   
   return cell;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+  
+  UITableViewCell *cell = [tableView cellForRowAtIndexPath:indexPath];
+  
+  NSString *toDoItem = self.todoItems[indexPath.row];
+  NSPredicate *predicate = [NSPredicate predicateWithFormat:@"title matches %@", toDoItem];
+  
+  // Assume there are no duplicates...
+  NSArray *results = [self.reminders filteredArrayUsingPredicate:predicate];
+  EKReminder *reminder = [results firstObject];
+  reminder.completed = !reminder.isCompleted;
+  cell.imageView.image = (reminder.isCompleted) ? [UIImage imageNamed:@"checkmarkOn"] : [UIImage imageNamed:@"checkmarkOff"];
 }
 
 - (BOOL)tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -103,7 +197,7 @@
   
   inputAlertView.alertViewStyle = UIAlertViewStylePlainTextInput;
   
-  __weak RWTableViewController *weakself = self;
+  __weak RWTableViewController *weakSelf = self;
   
   // Add a completion block (using our category to UIAlertView).
   [inputAlertView setCompletionBlock:^(UIAlertView *alertView, NSInteger buttonIndex) {
@@ -113,11 +207,11 @@
       
       UITextField *textField = [alertView textFieldAtIndex:0];
       NSString *string = [textField.text capitalizedString];
-      [weakself.todoItems addObject:string];
+      [weakSelf.todoItems addObject:string];
       
-      NSUInteger row = [weakself.todoItems count] - 1;
+      NSUInteger row = [weakSelf.todoItems count] - 1;
       NSIndexPath *indexPath = [NSIndexPath indexPathForRow:row inSection:0];
-      [weakself.tableView insertRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
+      [weakSelf.tableView insertRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
     }
   }];
   
@@ -224,14 +318,135 @@
   return snapshot;
 }
 
-/** @brief Add a to-do item to user's default Reminder database. */
-- (void)addReminderForToDoItem:(NSString *)item {
-  // TODO: implement this!
+/** @brief Update authorization status to access Reminder database. */
+- (void)updateAuthorizationStatusToAccessEventStore {
+  
+  EKAuthorizationStatus authorizationStatus = [EKEventStore authorizationStatusForEntityType:EKEntityTypeReminder];
+  
+  switch (authorizationStatus) {
+      
+      // Fall through. If denied or restricted, display and alert that we can't add a reminder.
+    case EKAuthorizationStatusDenied:
+    case EKAuthorizationStatusRestricted: {
+      
+      self.isAccessToEventStoreGranted = NO;
+      
+      UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:@"Access Denied" message:@"This app doesn't have access to your Reminders." delegate:nil cancelButtonTitle:@"Dismiss" otherButtonTitles:nil];
+      [alertView show];
+      
+      [self.tableView reloadData];
+      
+      break;
+    }
+      
+    case EKAuthorizationStatusAuthorized:
+      self.isAccessToEventStoreGranted = YES;
+      [self.tableView reloadData];
+      break;
+      
+    case EKAuthorizationStatusNotDetermined: {
+      __weak RWTableViewController *weakSelf = self;
+      [self.eventStore requestAccessToEntityType:EKEntityTypeReminder completion:^(BOOL granted, NSError *error) {
+        
+        dispatch_async(dispatch_get_main_queue(), ^{
+          weakSelf.isAccessToEventStoreGranted = granted;
+          [weakSelf.tableView reloadData];
+        });
+        
+      }];
+      break;
+    }
+  }
 }
 
-/** @brief Delete a to-do item from user's default Reminder database, if applicable. */
+/** @brief Add a to-do item to user's Reminder database. */
+- (void)addReminderForToDoItem:(NSString *)item {
+  
+  // App doesn't have access.
+  if (!self.isAccessToEventStoreGranted)
+    return;
+  
+  // Create a new reminder. At the minimum set its title and calendar property.
+  EKReminder *reminder = [EKReminder reminderWithEventStore:self.eventStore];
+  reminder.title = item;
+  reminder.calendar = self.calendar;
+  
+  NSDateComponents *oneDayComponents = [[NSDateComponents alloc] init];
+  oneDayComponents.day = 1;
+  
+  NSCalendar *gregorianCalendar = [[NSCalendar alloc] initWithCalendarIdentifier:NSGregorianCalendar];
+  NSDate *tomorrow = [gregorianCalendar dateByAddingComponents:oneDayComponents toDate:[NSDate date] options:0];
+  
+  NSUInteger unitFlags = NSCalendarUnitEra | NSCalendarUnitYear | NSCalendarUnitMonth | NSCalendarUnitDay;
+  NSDateComponents *tomorrowAt4PM = [gregorianCalendar components:unitFlags fromDate:tomorrow];
+  tomorrowAt4PM.hour = 4;
+  tomorrowAt4PM.minute = 0;
+  tomorrowAt4PM.second = 0;
+  
+  reminder.dueDateComponents = tomorrowAt4PM;
+  
+  // Save and commit.
+  NSError *error = nil;
+  BOOL success = [self.eventStore saveReminder:reminder commit:YES error:&error];
+  if (!success) {
+    // Handle error.
+  }
+  
+  // Give user some feedback!
+  NSString *message = (success) ? @"Reminder was successfully added!" : @"Failed to add reminder!";
+  UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:nil message:message delegate:nil cancelButtonTitle:nil otherButtonTitles:@"Dismiss", nil];
+  [alertView show];
+}
+
+/** @brief Delete a to-do item from user's Reminder database, if applicable. */
 - (void)deleteReminderForToDoItem:(NSString *)item {
-  // TODO: implement this!
+  // Find the matching EKReminder(s).
+  NSPredicate *predicate = [NSPredicate predicateWithFormat:@"title matches %@", item];
+  NSArray *results = [self.reminders filteredArrayUsingPredicate:predicate];
+  
+  // Assuming we want to delete all matching reminders.
+  if ([results count]) {
+    [results enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
+      NSError *error = nil;
+      BOOL success = [self.eventStore removeReminder:obj commit:NO error:&error];
+      if (!success) {
+        // Handle delete error
+      }
+    }];
+    
+    NSError *commitErr = nil;
+    BOOL success = [self.eventStore commit:&commitErr];
+    if (!success) {
+      // Handle commit error.
+    }
+  }
+}
+
+/** @brief Fetch reminder items from user's Reminder database. */
+- (void)fetchReminders {
+  
+  if (self.isAccessToEventStoreGranted) {
+    
+    // A predicate to fetch all reminders.
+    NSPredicate *predicate = [self.eventStore predicateForRemindersInCalendars:@[self.calendar]];
+    
+    // Fetch all matching reminders asynchronously.
+    __weak RWTableViewController *weakSelf = self;
+    [self.eventStore fetchRemindersMatchingPredicate:predicate completion:^(NSArray *reminders) {
+      
+      weakSelf.reminders = [NSMutableArray arrayWithArray:reminders];
+      
+      dispatch_async(dispatch_get_main_queue(), ^{
+        // Update UI on the main thread.
+        [weakSelf.tableView reloadData];
+      });
+    }];
+  }
+}
+
+/** @brief Gets called when EKEventStoreChangedNotification is sent. */
+- (void)eventStoreDidChangeWithNotification:(NSNotification *)notification {
+  [self fetchReminders];
 }
 
 @end
