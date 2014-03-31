@@ -371,6 +371,20 @@
   reminder.title = item;
   reminder.calendar = self.calendar;
   
+  NSDateComponents *oneDayComponents = [[NSDateComponents alloc] init];
+  oneDayComponents.day = 1;
+  
+  NSCalendar *gregorianCalendar = [[NSCalendar alloc] initWithCalendarIdentifier:NSGregorianCalendar];
+  NSDate *tomorrow = [gregorianCalendar dateByAddingComponents:oneDayComponents toDate:[NSDate date] options:0];
+  
+  NSUInteger unitFlags = NSCalendarUnitEra | NSCalendarUnitYear | NSCalendarUnitMonth | NSCalendarUnitDay;
+  NSDateComponents *tomorrowAt4PM = [gregorianCalendar components:unitFlags fromDate:tomorrow];
+  tomorrowAt4PM.hour = 4;
+  tomorrowAt4PM.minute = 0;
+  tomorrowAt4PM.second = 0;
+  
+  reminder.dueDateComponents = tomorrowAt4PM;
+  
   // Save and commit.
   NSError *error = nil;
   BOOL success = [self.eventStore saveReminder:reminder commit:YES error:&error];
