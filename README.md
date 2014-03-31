@@ -1,6 +1,6 @@
 UDo with Reminder!
 ==================
-This is a repository for the sample projects of Cookbook-style tuorial: MovingMaking a Calendar Reminder.
+This is a repository for the sample project of Cookbook-style tutorial: MovingMaking a Calendar Reminder.
 
 
 Branches
